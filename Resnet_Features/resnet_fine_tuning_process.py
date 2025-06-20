@@ -9,6 +9,15 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Pose_Keypoints')))
 from train_loop import train_loop
 
+from torchvision.datasets import ImageFolder
+import os
+
+def ignore_annotated(path: str) -> bool:
+    """
+    Only accept image files **not** coming from an 'annotated' sub-folder.
+    """
+    return ('annotated' not in path.lower()) and path.lower().endswith(('.jpg', '.jpeg', '.png'))
+
 IMG_SIZE = 224
 train_tf = transforms.Compose([
         transforms.Resize((IMG_SIZE,IMG_SIZE)),
@@ -27,9 +36,12 @@ root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'yoga
 print("Resolved dataset path:", root)
 print("Exists?", os.path.isdir(root))
 #root = r"../../yoga_kaggle_dataset"         # same folder tree you use in data_keypoints_labeling.py :contentReference[oaicite:0]{index=0}
-dataset = datasets.ImageFolder(root, transform=train_tf)  # all with train_tf, override later
+dataset = datasets.ImageFolder(root, transform=train_tf, is_valid_file=ignore_annotated)  # all with train_tf, override later
+#dataset = FilteredImageFolder(root, transform=train_tf)
 train_size = int(0.8 * len(dataset))
+print(train_size)
 val_size   = len(dataset) - train_size
+print(val_size)
 train_ds, val_ds = random_split(dataset, [train_size, val_size])
 
 # train_ds = datasets.ImageFolder(root, transform=train_tf)
@@ -39,7 +51,6 @@ val_dl   = DataLoader(val_ds,   batch_size=32, shuffle=False)
 
 num_classes = len(dataset.classes)
 
-print(train_ds.__sizeof__())
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -59,22 +70,22 @@ for p in model.parameters():          # freeze all
 for p in model.fc.parameters():       # unfreeze head
     p.requires_grad_(True)
 
-# opt = torch.optim.Adam(model.fc.parameters(), lr=1e-3)
+opt = torch.optim.Adam(model.fc.parameters(), lr=1e-3)
 
-# history, best_epoch = train_loop(model, train_dl, val_dl, opt, loss_fn,
-#            epochs=5, num_classes=num_classes)
+history, best_epoch = train_loop(model, train_dl, val_dl, opt, loss_fn,
+           epochs=10, num_classes=num_classes)
 
 # -------- Phase B: head + last block ------------------------------------
-for p in model.layer4.parameters():   # unfreeze
-    p.requires_grad_(True)
+# for p in model.layer4.parameters():   # unfreeze
+#     p.requires_grad_(True)
 
-opt = torch.optim.Adam([
-        {"params": model.layer4.parameters(), "lr": 1e-4},
-        {"params": model.fc.parameters(),     "lr": 5e-4},
-])
+# opt = torch.optim.Adam([
+#         {"params": model.layer4.parameters(), "lr": 1e-4},
+#         {"params": model.fc.parameters(),     "lr": 5e-4},
+# ])
 
 history, best_epoch =train_loop(model, train_dl, val_dl, opt, loss_fn,
-           epochs=10, num_classes=num_classes)
+           epochs=20, num_classes=num_classes)
 
 torch.save(model.state_dict(), "resnet18_yoga.pt")
 
