@@ -1,4 +1,4 @@
-# ResNet Fine Tuning Flow
+# ResNet embbeding represantion
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
 import torch, torch.nn as nn
@@ -28,18 +28,9 @@ print("Resolved dataset path:", root)
 print("Exists?", os.path.isdir(root))
 #root = r"../../yoga_kaggle_dataset"         # same folder tree you use in data_keypoints_labeling.py :contentReference[oaicite:0]{index=0}
 dataset = datasets.ImageFolder(root, transform=train_tf)  # all with train_tf, override later
-train_size = int(0.8 * len(dataset))
-val_size   = len(dataset) - train_size
-train_ds, val_ds = random_split(dataset, [train_size, val_size])
-
-# train_ds = datasets.ImageFolder(root, transform=train_tf)
-# val_ds   = datasets.ImageFolder(root, transform=val_tf)
-train_dl = DataLoader(train_ds, batch_size=32, shuffle=True)
-val_dl   = DataLoader(val_ds,   batch_size=32, shuffle=False)
-
+dataset_dl = DataLoader(dataset, batch_size=32, shuffle=True)
 num_classes = len(dataset.classes)
 
-print(train_ds.__sizeof__())
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -48,33 +39,22 @@ print(device)
 # 1) Model ----------------------------------------------------------------
 model = models.resnet18(weights="IMAGENET1K_V1")
 in_feat          = model.fc.in_features
-model.fc         = nn.Linear(in_feat, num_classes)
+model.fc         = nn.Identity()
 model.to(device)
 
-loss_fn = nn.CrossEntropyLoss()
+# 2) --------------------------------------------------------------
+all_embeddings = []
+all_labels = []
 
-# # -------- Phase A: head only --------------------------------------------
-for p in model.parameters():          # freeze all
-    p.requires_grad_(False)
-for p in model.fc.parameters():       # unfreeze head
-    p.requires_grad_(True)
+model.eval()
+with torch.no_grad():
+    for images, labels in dataset_dl:
+        images = images.to(device)
+        feats = model(images)  # [B, 512]
+        all_embeddings.append(feats.cpu())
+        all_labels.append(labels.cpu())
 
-# opt = torch.optim.Adam(model.fc.parameters(), lr=1e-3)
+embeddings = torch.cat(all_embeddings)  # [N, 512]
+labels     = torch.cat(all_labels)      # [N]
 
-# history, best_epoch = train_loop(model, train_dl, val_dl, opt, loss_fn,
-#            epochs=5, num_classes=num_classes)
-
-# -------- Phase B: head + last block ------------------------------------
-for p in model.layer4.parameters():   # unfreeze
-    p.requires_grad_(True)
-
-opt = torch.optim.Adam([
-        {"params": model.layer4.parameters(), "lr": 1e-4},
-        {"params": model.fc.parameters(),     "lr": 5e-4},
-])
-
-history, best_epoch =train_loop(model, train_dl, val_dl, opt, loss_fn,
-           epochs=10, num_classes=num_classes)
-
-torch.save(model.state_dict(), "resnet18_yoga.pt")
-
+torch.save({'embeddings': embeddings, 'labels': labels}, 'resnet18_embeddings.pt')
