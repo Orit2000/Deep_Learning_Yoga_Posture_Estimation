@@ -19,10 +19,11 @@ from tqdm.auto import tqdm
 from ultralytics import YOLO
 from PIL import Image
 import warnings
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 # Load the keypoints labels
-df = pd.read_csv("yolo_keypoints_dataset.csv")
+df = pd.read_csv(r"yolo_keypoints_dataset.csv")
 df = df.dropna() #delete undetected pose 
 df = df.iloc[:, 2:]
 

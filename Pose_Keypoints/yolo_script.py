@@ -8,9 +8,9 @@ from pathlib import Path
 # image_folder = "./images_not_splitted/Akarna_Dhanurasana"           # Folder with input images
 # keypoints_folder = "./images_not_splitted/Akarna_Dhanurasana/output_keypoints"   # Where to save the .json files
 # annotated_folder = "./images_not_splitted/Akarna_Dhanurasana/output_images"      # Where to save the visualized images
-image_folder = r"C:\Users\Orit\Deep_Learning_Project\Boat_Pose_or_Paripurna_Navasana_"
-keypoints_folder = r"C:\Users\Orit\Deep_Learning_Project\Boat_Pose_or_Paripurna_Navasana_\output_keypoints"   # Where to save the .json files
-annotated_folder = r"C:\Users\Orit\Deep_Learning_Project\Boat_Pose_or_Paripurna_Navasana_\output_images"      # Where to save the visualized images
+image_folder = r"..\..\yoga_kaggle_dataset\Adho Mukha Svanasana"
+keypoints_folder = r"..\..\yoga_kaggle_dataset\Adho Mukha Svanasana\keypoints"   # Where to save the .json files
+annotated_folder = r"..\..\yoga_kaggle_dataset\Adho Mukha Svanasana\annotated"      # Where to save the visualized images
 
 os.makedirs(keypoints_folder, exist_ok=True)
 os.makedirs(annotated_folder, exist_ok=True)

@@ -59,7 +59,7 @@ def data_label(dateset_folder, saving_flag=False):
     return data
 
 # Main
-dateset_folder =  r"../yoga_kaggle_dataset"
+dateset_folder =  r"...\..\yoga_kaggle_dataset"
 data_csv_path = r"yolo_keypoints_dataset.csv"
 print(data_csv_path)
 if os.path.exists(data_csv_path):
@@ -86,7 +86,8 @@ if os.path.exists(data_csv_path):
     print(X.shape)
     print(y.shape)
 else:
-    dateset_folder =  r"../yoga_kaggle_dataset"
+    dateset_folder =  r"..\..\yoga_kaggle_dataset"
+    dateset_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'yoga_kaggle_dataset'))
     data = data_label(dateset_folder)
     total_features = len(data[0])
     df = pd.DataFrame(
