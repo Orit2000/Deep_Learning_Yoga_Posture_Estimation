@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-from resnet_fine_tune import ResNetFineTune   # your wrapper
+from Resnet_Features.resnet_fine_tune_old import ResNetFineTune   # your wrapper
 
 # ─── 1.  Dataset & transforms ────────────────────────────────────────────────
 root_dir = r"../yoga_kaggle_dataset"    # <— all images live under class folders
