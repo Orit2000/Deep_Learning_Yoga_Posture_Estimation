@@ -5,7 +5,7 @@ class TwoTokenTransformer(nn.Module):
     def __init__(self,
                  kp_dim=34,
                  cnn_dim=512,
-                 d_model=256,
+                 d_model=512,
                  nhead=4,
                  depth=4,
                  num_classes= 47 ):
