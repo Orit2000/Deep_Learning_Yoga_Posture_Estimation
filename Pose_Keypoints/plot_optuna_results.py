@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import optuna
 from optuna.visualization import plot_param_importances
+import json
 
 # Load CSV
 df = pd.read_csv("optuna_yoga_keypoints.csv")
@@ -71,3 +72,30 @@ plt.show()
 study = optuna.load_study(study_name="yoga_keypoints_hpo", storage="sqlite:///optuna_yoga_keypoints.db")
 fig = plot_param_importances(study)
 fig.show()
+
+# Plot loss history -------------------------------------------------
+with open("best_trial_history.json", "r") as f:
+    best = json.load(f)
+
+history = best["history"]
+best_epoch = best["best_epoch"]
+
+# Plotting
+plt.figure(figsize=(12,5))
+plt.subplot(1,2,1)
+plt.plot(history["train_loss"], label="train")
+plt.plot(history["test_loss"], label="val")
+plt.title("Loss")
+plt.legend()
+plt.xlabel("epoch")
+
+plt.subplot(1,2,2)
+plt.plot(history["train_accuracy"], label="train")
+plt.plot(history["test_accuracy"], label="val")
+plt.title("Accuracy")
+plt.legend()
+plt.xlabel("epoch")
+
+plt.suptitle(f"Best trial #{best['trial_number']} | Best epoch: {best_epoch}")
+plt.tight_layout()
+plt.show()
