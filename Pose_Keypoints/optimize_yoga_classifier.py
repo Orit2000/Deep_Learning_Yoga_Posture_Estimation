@@ -75,10 +75,10 @@ def objective(trial):
     opt_name   = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"]) # Let Optuna decide which optimizer type to use
     dropout    = 0.271   # Instead of - trial.suggest_float("dropout", 0.1, 0.5) we fixed the value
 
-    # hidden_dim = 2
+    # hidden_dim = 256
     # num_layers = 2
     # lr         = 0.00197
-    # batch_size = 256
+    # batch_size = 32
     # norm_type  = "layer"
     # opt_name   = "Adam"
     # dropout    = 0.271  
@@ -141,7 +141,7 @@ def objective(trial):
         testloader=val_loader,
         optimizer=optimizer,
         loss_fn=loss_fn,
-        epochs=20,  # tuning epochs
+        epochs=60,  # tuning epochs
         num_classes=num_classes,
         verbose=False,
         trial=trial,
