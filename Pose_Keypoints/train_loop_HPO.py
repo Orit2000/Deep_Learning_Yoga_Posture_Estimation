@@ -9,7 +9,7 @@ from tqdm.auto import tqdm
 # ────────────────────────────────────────────────────────────────
 # helper steps (signature unchanged)
 # ────────────────────────────────────────────────────────────────
-def train_step(model, loader, optim, loss_fn, device, acc_m, f1_m):
+def train_step_HPO(model, loader, optim, loss_fn, device, acc_m, f1_m):
     model.train()
     t_loss = t_acc = t_f1 = 0.0
     for X, y in loader:
@@ -33,7 +33,7 @@ def train_step(model, loader, optim, loss_fn, device, acc_m, f1_m):
 
 
 @torch.inference_mode()
-def test_step(model, loader, loss_fn, device, acc_m, f1_m):
+def test_step_HPO(model, loader, loss_fn, device, acc_m, f1_m):
     model.eval()
     v_loss = v_acc = v_f1 = 0.0
     for X, y in loader:
@@ -74,10 +74,10 @@ def train_loop_HPO(
     no_improve = 0
 
     for ep in tqdm(range(epochs)):
-        tr_loss, tr_acc, tr_f1 = train_step(
+        tr_loss, tr_acc, tr_f1 = train_step_HPO(
             model, trainloader, optimizer, loss_fn, device, acc_m, f1_m
         )
-        va_loss, va_acc, va_f1 = test_step(
+        va_loss, va_acc, va_f1 = test_step_HPO(
             model, testloader, loss_fn, device, acc_m, f1_m
         )
 
