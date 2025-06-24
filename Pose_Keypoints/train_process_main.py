@@ -1,24 +1,17 @@
-from train_loop import train_loop
 import torch
-import os
-import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import classification_report, confusion_matrix
-import seaborn as sns
 from YogaClassifier import YogaClassifier
 from torch import nn
 from torchsummary import summary
 from torchmetrics import Accuracy, F1Score, ConfusionMatrix
 from torch.utils.data import DataLoader, TensorDataset
-from tqdm.auto import tqdm
+import train_loop
 
-from ultralytics import YOLO
-from PIL import Image
-import warnings
+#from train_loop import train_loop
+print("✅ Loaded train_loop from:", train_loop.__file__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 # Load the keypoints labels
@@ -81,7 +74,7 @@ summary(model, input_size=(X.shape))
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 loss_fn = nn.CrossEntropyLoss()
 epochs = 30
-result, best = train_loop(
+result, best = train_loop.train_loop(
       model=model,
       trainloader=train_dataloader,
       testloader=test_dataloader,

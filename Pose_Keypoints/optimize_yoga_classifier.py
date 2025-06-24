@@ -4,7 +4,7 @@ import torch.nn as nn
 import pandas as pd
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
-from train_loop import train_loop
+from train_loop_HPO import train_loop_HPO
 from optuna.samplers import TPESampler
 from optuna.pruners import MedianPruner
 from optuna.exceptions import TrialPruned
@@ -96,7 +96,7 @@ def objective(trial):
             return nn.Identity()
     
     class OptimizedYogaClassifier(nn.Module):
-        def __init__(self, input_length, num_classes, hidden_dim, dropout, num_layers, norm_type):
+        def __init__(self, input_length, num_classes, hidden_dim, dropout, num_layers):
             super().__init__()
             self.layer1 = nn.Linear(input_length, hidden_dim)
             self.norm1 = make_norm(hidden_dim)
@@ -122,7 +122,7 @@ def objective(trial):
             x = self.out(x)
             return x
 
-    model = OptimizedYogaClassifier(input_length, num_classes, hidden_dim, dropout, num_layers, norm_type).to(device)
+    model = OptimizedYogaClassifier(input_length, num_classes, hidden_dim, dropout, num_layers).to(device)
 
     # Optimizer selection
     if opt_name == "Adam":
@@ -135,7 +135,7 @@ def objective(trial):
         
     loss_fn = nn.CrossEntropyLoss()
 
-    history, best_epoch = train_loop(
+    history, best_epoch = train_loop_HPO(
         model=model,
         trainloader=train_loader,
         testloader=val_loader,
