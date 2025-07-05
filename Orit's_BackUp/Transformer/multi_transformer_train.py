@@ -1,34 +1,12 @@
 import torch, torch.nn.functional as F
 from torch.utils.data import DataLoader
-from TwoTokenTransformer import TwoTokenTransformer
+from MultiTokenTransformer import MultiTokenTransformer
 import pandas as pd
 import sys
 import os
 from transformer_train_loop import train_loop
 from torch.utils.data import TensorDataset, DataLoader
 
-
-# #FULL_DF   = pd.read_parquet("combo_features.parquet")      # read once
-# FULL_DF   = pd.read_csv("combo_features.csv")  
-# KP_COLS   = [c for c in FULL_DF.columns if c.startswith("kp_")]
-# CNN_COLS  = [c for c in FULL_DF.columns if c.startswith("cnn_")]
-# print(FULL_DF[KP_COLS].dtypes)      # are they “object” (string) instead of float?
-# print(FULL_DF[CNN_COLS].dtypes)
-# print(FULL_DF.loc[0, KP_COLS[:]])
-
-
-# print("KP_COLS len :", len(KP_COLS))
-# print("CNN_COLS len:", len(CNN_COLS))
-
-# sets = YogaPairDataset("combo_features.csv", KP_COLS, CNN_COLS)
-# train_set = sets.train_df
-# val_set = sets.val_df
-# train_set.to_csv("train_set.csv", index=False)
-# val_set.to_csv("val_set.csv", index=False)
-# print(train_set)
-# val_set   = YogaPairDataset("combo_features.csv", KP_COLS, CNN_COLS, train=False,
-#                             kp_mu=train_set.kp_mu, kp_std=train_set.kp_std,
-#                             cnn_mu=train_set.cnn_mu, cnn_std=train_set.cnn_std)
 
 def make_tensor_ds(csv_path, kp_mu, kp_std, cnn_mu, cnn_std):
     df   = pd.read_csv(csv_path)
@@ -56,7 +34,7 @@ train_dl = DataLoader(make_tensor_ds("train_set.csv", kp_mu, kp_std, cnn_mu, cnn
 val_dl   = DataLoader(make_tensor_ds("val_set.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
 test_dl  = DataLoader(make_tensor_ds("test_set.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
 
-model = TwoTokenTransformer(num_classes=47)
+model = MultiTokenTransformer(num_classes=47)
 model.to(device := ("cuda" if torch.cuda.is_available() else "cpu"))
 
 opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-4)

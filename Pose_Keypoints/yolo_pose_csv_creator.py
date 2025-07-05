@@ -31,7 +31,11 @@ def data_label(dataset_folder, saving_flag=False):
             results = model.predict(img_path, boxes=False, verbose=False)
 
             r   = results[0]
-            key = r.keypoints.xyn.cpu()[0].view(-1).tolist()  # 34 floats
+            if r.keypoints is None or r.keypoints.xyn.numel() == 0:
+                key = [0.0] * 34                         # fill-in vector
+            else:
+                key = r.keypoints.xyn.cpu()[0].view(-1).tolist()
+
             key.extend([img_path, label, int(counter)])                     # + path + label
             rows.append(key)
 

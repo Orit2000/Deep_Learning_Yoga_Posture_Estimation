@@ -1,6 +1,14 @@
-from Contrustive_Learning.contrustive_learning_classes import ContrastiveModel
+from .Contrastive_Learning.contrustive_learning_classes import ContrastiveModel,ContrastiveMLP
 import torch
 import torch.nn.functional as F
+import torch, torch.nn.functional as F
+from torch.utils.data import DataLoader
+from MultiTokenTransformer import MultiTokenTransformer
+import pandas as pd
+import sys
+import os
+from transformer_train_loop import train_loop
+from torch.utils.data import TensorDataset, DataLoader
 
 def nt_xent_loss(z1, z2, temperature=0.5):
     z1 = F.normalize(z1, dim=1)
@@ -23,6 +31,20 @@ def nt_xent_loss(z1, z2, temperature=0.5):
     loss = F.cross_entropy(sim, labels)
     return loss
 
+train_raw = pd.read_csv("train_set.csv")
+test_raw = pd.read_csv("test_set.csv")
+val_raw = pd.read_csv("val_set.csv")
+KP_COLS   = [c for c in train_raw.columns if c.startswith("kp_")]
+CNN_COLS  = [c for c in train_raw.columns if c.startswith("cnn_")]
+kp_mu  = torch.tensor(train_raw[KP_COLS ].mean().values, dtype=torch.float32)
+kp_std = torch.tensor(train_raw[KP_COLS ].std ().values + 1e-8, dtype=torch.float32)
+cnn_mu = torch.tensor(train_raw[CNN_COLS].mean().values, dtype=torch.float32)
+cnn_std= torch.tensor(train_raw[CNN_COLS].std ().values + 1e-8, dtype=torch.float32)
+
+train_dl = DataLoader(make_tensor_ds("train_set.csv", kp_mu, kp_std, cnn_mu, cnn_std), batch_size=64, shuffle=True)
+val_dl   = DataLoader(make_tensor_ds("val_set.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
+test_dl  = DataLoader(make_tensor_ds("test_set.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
+
 model = ContrastiveModel(resnet_dim=512, keypoint_dim=68, embed_dim=128).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
 
@@ -32,8 +54,8 @@ for epoch in range(num_epochs):
 
         # 1) get frozen‐backbone embeddings
         with torch.no_grad():
-            feats_img = resnet_backbone(images)    # [B, 512, 1, 1] → flatten → [B,512]
-            feats_kp  = yolo_keypoint_encoder(kp_xy)  # [B, keypoint_dim]
+            feats_img = ContrastiveMLP(images)    # [B, 512, 1, 1] → flatten → [B,512]
+            feats_kp  = ContrastiveMLP(kp_xy)  # [B, keypoint_dim]
 
         # 2) project into shared space
         z_img, z_kp = model(feats_img, feats_kp)
