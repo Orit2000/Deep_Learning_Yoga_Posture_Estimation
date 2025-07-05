@@ -112,9 +112,9 @@ if __name__ == "__main__":
     study.optimize(objective, n_trials=20)
 
     best_trial = study.best_trial
-    with open("best_trial_history.json", "w") as f:
+    with open("best_trial_history_transformer.json", "w") as f:
         json.dump(best_trial.user_attrs["history"], f, indent=2)
-    with open("best_hyperparameters.json", "w") as f:
+    with open("best_hyperparameters_transformer.json", "w") as f:
         json.dump(best_trial.params, f, indent=2)
 
     print("Best hyperparameters:")

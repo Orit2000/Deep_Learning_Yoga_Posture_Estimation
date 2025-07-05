@@ -6,7 +6,7 @@ train_csv = "Transformer/train_set_augmented_final.csv"
 val_csv = "Transformer/val_set_augmented_final.csv"
 out_train_csv = "Transformer/train_set_cleaned.csv"
 out_val_csv = "Transformer/val_set_cleaned.csv"
-placeholder_value = -1.0
+placeholder_value = 0.0
 
 # === Load data ===
 print("🔍 Loading data...")

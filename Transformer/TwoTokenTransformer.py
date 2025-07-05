@@ -6,9 +6,11 @@ class TwoTokenTransformer(nn.Module):
                  kp_dim=34,
                  cnn_dim=512,
                  d_model=512,
-                 nhead=4,
+                 nhead=2,
                  depth=4,
-                 num_classes= 47 ):
+                 num_classes=47,
+                 dim_feedforward=None,
+                 dropout=0.1):
         super().__init__()
 
         # project each modality into the common d_model space
@@ -18,11 +20,15 @@ class TwoTokenTransformer(nn.Module):
         # learnable positional / segment embeddings for the 2 tokens
         self.pos_embed = nn.Parameter(torch.zeros(2, d_model))
 
+        # Default to 4 * d_model if not specified
+        if dim_feedforward is None:
+            dim_feedforward = 4 * d_model
+
         encoder_layer = nn.TransformerEncoderLayer(
                             d_model=d_model,
                             nhead=nhead,
-                            dim_feedforward=4*d_model,
-                            dropout=0.1,
+                            dim_feedforward=dim_feedforward,
+                            dropout=dropout,
                             batch_first=True)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=depth)
 
