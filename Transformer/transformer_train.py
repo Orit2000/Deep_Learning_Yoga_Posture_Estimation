@@ -8,6 +8,7 @@ from transformer_train_loop import train_loop
 from torch.utils.data import TensorDataset, DataLoader
 
 
+<<<<<<< HEAD
 # #FULL_DF   = pd.read_parquet("combo_features.parquet")      # read once
 # FULL_DF   = pd.read_csv("combo_features.csv")  
 # KP_COLS   = [c for c in FULL_DF.columns if c.startswith("kp_")]
@@ -15,6 +16,15 @@ from torch.utils.data import TensorDataset, DataLoader
 # print(FULL_DF[KP_COLS].dtypes)      # are they “object” (string) instead of float?
 # print(FULL_DF[CNN_COLS].dtypes)
 # print(FULL_DF.loc[0, KP_COLS[:]])
+=======
+#FULL_DF   = pd.read_parquet("combo_features.parquet")      # read once
+FULL_DF   = pd.read_csv("combo_features.csv")  
+KP_COLS   = [c for c in FULL_DF.columns if c.startswith("kp_")]
+CNN_COLS  = [c for c in FULL_DF.columns if c.startswith("cnn_")]
+print(FULL_DF[KP_COLS].dtypes)      # are they “object” (string) instead of float?
+print(FULL_DF[CNN_COLS].dtypes)
+#print(FULL_DF.loc[0, KP_COLS[:]])
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 
 
 # print("KP_COLS len :", len(KP_COLS))
@@ -30,7 +40,11 @@ from torch.utils.data import TensorDataset, DataLoader
 #                             kp_mu=train_set.kp_mu, kp_std=train_set.kp_std,
 #                             cnn_mu=train_set.cnn_mu, cnn_std=train_set.cnn_std)
 
+<<<<<<< HEAD
 def make_tensor_ds(csv_path, kp_mu, kp_std, cnn_mu, cnn_std):
+=======
+def make_tensor_ds(csv_path):
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
     df   = pd.read_csv(csv_path)
 
     kp   = torch.tensor(df[KP_COLS ].values, dtype=torch.float32)
@@ -45,16 +59,26 @@ def make_tensor_ds(csv_path, kp_mu, kp_std, cnn_mu, cnn_std):
 train_raw = pd.read_csv("train_set.csv")
 test_raw = pd.read_csv("test_set.csv")
 val_raw = pd.read_csv("val_set.csv")
+<<<<<<< HEAD
 KP_COLS   = [c for c in train_raw.columns if c.startswith("kp_")]
 CNN_COLS  = [c for c in train_raw.columns if c.startswith("cnn_")]
+=======
+
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 kp_mu  = torch.tensor(train_raw[KP_COLS ].mean().values, dtype=torch.float32)
 kp_std = torch.tensor(train_raw[KP_COLS ].std ().values + 1e-8, dtype=torch.float32)
 cnn_mu = torch.tensor(train_raw[CNN_COLS].mean().values, dtype=torch.float32)
 cnn_std= torch.tensor(train_raw[CNN_COLS].std ().values + 1e-8, dtype=torch.float32)
 
+<<<<<<< HEAD
 train_dl = DataLoader(make_tensor_ds("train_set.csv", kp_mu, kp_std, cnn_mu, cnn_std), batch_size=64, shuffle=True)
 val_dl   = DataLoader(make_tensor_ds("val_set.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
 test_dl  = DataLoader(make_tensor_ds("test_set.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
+=======
+train_dl = DataLoader(make_tensor_ds("train_set.csv"), batch_size=32, shuffle=True)
+val_dl   = DataLoader(make_tensor_ds("val_set.csv"),   batch_size=32)
+test_dl   = DataLoader(make_tensor_ds("test_set.csv"),   batch_size=32)
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 
 model = TwoTokenTransformer(num_classes=47)
 model.to(device := ("cuda" if torch.cuda.is_available() else "cpu"))
@@ -63,7 +87,11 @@ opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-4)
 sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode="max", patience=3)
 loss_fn = torch.nn.CrossEntropyLoss()
 
+<<<<<<< HEAD
 history, best_epoch = train_loop(model, train_dl, val_dl, opt, loss_fn, 500, 47,verbose=True)
+=======
+history, best_epoch = train_loop(model, train_dl, val_dl, opt, loss_fn, 25, 47,verbose=True)
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 
 # for epoch in range(25):
 #     model.train()

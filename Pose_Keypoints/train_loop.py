@@ -1,24 +1,8 @@
-import os
-import random
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import classification_report, confusion_matrix
-import seaborn as sns
-
 import torch
-from torch import nn
-from torchsummary import summary
-from torchmetrics import Accuracy, F1Score, ConfusionMatrix
-from torch.utils.data import DataLoader, TensorDataset
 from tqdm.auto import tqdm
-
-from ultralytics import YOLO
-from PIL import Image
-import warnings
-
+import json
+from torchmetrics import Accuracy, F1Score
 
 def train_step(model, dataloader, optimizer, loss_fn,device,accuracy_score,f1_score):
     model.train()
@@ -75,7 +59,7 @@ def test_step(model, dataloader, loss_fn,device,accuracy_score,f1_score):
     test_f1 /= len(dataloader)
     return test_loss, test_acc, test_f1
 
-def train_loop(model, trainloader, testloader, optimizer, loss_fn, epochs, num_classes,verbose=True,):
+def train_loop(model, trainloader, testloader, optimizer, loss_fn, epochs, num_classes,verbose=True, trial=None, patience=5): #patience for early stopping
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     accuracy_score = Accuracy(task="multiclass", num_classes=num_classes).to(device)
     f1_score = F1Score(task="multiclass", num_classes=num_classes).to(device)
@@ -88,6 +72,9 @@ def train_loop(model, trainloader, testloader, optimizer, loss_fn, epochs, num_c
         "test_f1": [],
     }
 
+    no_improve_epochs = 0
+    best_acc = 0.0;  
+    
     for epoch in tqdm(range(epochs)):
         train_loss, train_acc, train_f1 = train_step(
             model=model,
@@ -107,31 +94,70 @@ def train_loop(model, trainloader, testloader, optimizer, loss_fn, epochs, num_c
             accuracy_score=accuracy_score,
             f1_score=f1_score
         )
-       
+
+        
         history['train_loss'].append(train_loss)
         history['train_accuracy'].append(train_acc)
         history['train_f1'].append(train_f1)
         history['test_loss'].append(test_loss)
         history['test_accuracy'].append(test_acc)
         history['test_f1'].append(test_f1)
-    
-        # Checkpoint
-        best = max(history['test_accuracy'])
-        best_epoch = history['test_accuracy'].index(best) 
-   
-        if test_acc < best:
-            status = f"Accuracy not improved from epoch {best_epoch}"
-        else: 
-            status = f"Accuracy improved, saving weight....."
-            torch.save(model.state_dict(), 'best.pth')
+          
+        # Early-stopping bookkeeping
+        if test_acc > best_acc:
+            best_acc = test_acc
+            best_epoch = epoch
+            best_weights = model.state_dict()
+            no_improve_epochs = 0
+            torch.save(best_weights, 'best1.pth')
+            status = f"✅ Accuracy improved, weights saved (epoch {epoch})"
+        else:
+            no_improve_epochs += 1
+            status = f"⚠️ Accuracy not improved (epoch {epoch}) — Patience: {no_improve_epochs}/{patience}"
 
         if verbose:
             print(f"Epoch {epoch}")
-            print(f"train loss: {train_loss} | test loss: {test_loss}")
-            print(f"train accuracy: {train_acc} | test accuracy: {test_acc}")
-            print(f"train f1: {train_f1} | test f1: {test_f1}")
+            print(f"train loss: {train_loss:.4f} | test loss: {test_loss:.4f}")
+            print(f"train accuracy: {train_acc:.4f} | test accuracy: {test_acc:.4f}")
+            print(f"train f1: {train_f1:.4f} | test f1: {test_f1:.4f}")
             print(status)
             print("-------------------------------------------------")
 
-    print(f"Best accuracy on epoch: {best_epoch}, accuracy: {best}")
+        if no_improve_epochs >= patience:
+            print(f"⏹️ Early stopping at epoch {epoch} (no improvement for {patience} epochs)")
+            break
+
+        model.load_state_dict(best_weights)
+        print(f"🏁 Best accuracy: {best_acc:.4f} (epoch {best_epoch})")
+        #return history, best_epoch
+
+    model.load_state_dict(best_weights)
+    if verbose:
+        print(f"🏁 Best val accuracy {best_acc:.4f} at epoch {best_epoch}")
+
+    # Save history
+    pd.DataFrame(history).to_csv("training_history1.csv", index=False)
+    with open("training_history1.json", "w") as f:
+        json.dump(history, f)
+    print("You are in train_loop.py")
     return history, best_epoch
+    
+    #     best = max(history['test_accuracy'])
+    #     best_epoch = history['test_accuracy'].index(best) 
+   
+    #     if test_acc < best:
+    #         status = f"Accuracy not improved from epoch {best_epoch}"
+    #     else: 
+    #         status = f"Accuracy improved, saving weight....."
+    #         torch.save(model.state_dict(), 'best.pth')
+
+    #     if verbose:
+    #         print(f"Epoch {epoch}")
+    #         print(f"train loss: {train_loss} | test loss: {test_loss}")
+    #         print(f"train accuracy: {train_acc} | test accuracy: {test_acc}")
+    #         print(f"train f1: {train_f1} | test f1: {test_f1}")
+    #         print(status)
+    #         print("-------------------------------------------------")
+
+    # print(f"Best accuracy on epoch: {best_epoch}, accuracy: {best}")
+    # return history, best_epoch

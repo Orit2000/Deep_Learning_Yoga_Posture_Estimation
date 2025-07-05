@@ -3,12 +3,16 @@ from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
 import torch, torch.nn as nn
 from torchvision import models
+<<<<<<< HEAD
 from torchvision.datasets import ImageFolder
 import pandas as pd
+=======
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 from torch.utils.data import random_split
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Pose_Keypoints')))
+<<<<<<< HEAD
 
 
 def ignore_annotated(path: str) -> bool:
@@ -37,6 +41,9 @@ class ImageFolderWithPaths(ImageFolder):
         # fetch the corresponding file path
         path = self.samples[index][0]
         return img, label, path
+=======
+from train_loop import train_loop
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 
 IMG_SIZE = 224
 train_tf = transforms.Compose([
@@ -46,23 +53,43 @@ train_tf = transforms.Compose([
         # transforms.Normalize(
         #     mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
 ])
+<<<<<<< HEAD
 
+=======
+val_tf   = transforms.Compose([
+        transforms.Resize((IMG_SIZE,IMG_SIZE)),
+        transforms.ToTensor(),
+        # transforms.Normalize(
+        #     mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
+])
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'yoga_kaggle_dataset'))
 print("Resolved dataset path:", root)
 print("Exists?", os.path.isdir(root))
 #root = r"../../yoga_kaggle_dataset"         # same folder tree you use in data_keypoints_labeling.py :contentReference[oaicite:0]{index=0}
+<<<<<<< HEAD
 dataset = ImageFolderWithPaths(root, transform=train_tf) 
 print("Number of images:", len(dataset))  # dataset = datasets.ImageFolder(...)
 
 dataset_dl = DataLoader(dataset, batch_size=32, shuffle=True)
 num_classes = len(dataset.classes)
 class_names = dataset.classes  
+=======
+dataset = datasets.ImageFolder(root, transform=train_tf)  # all with train_tf, override later
+dataset_dl = DataLoader(dataset, batch_size=32, shuffle=True)
+num_classes = len(dataset.classes)
+
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
+<<<<<<< HEAD
 # 1) Model --------------------------------------------------------
+=======
+# 1) Model ----------------------------------------------------------------
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 model = models.resnet18(weights="IMAGENET1K_V1")
 in_feat          = model.fc.in_features
 model.fc         = nn.Identity()
@@ -71,6 +98,7 @@ model.to(device)
 # 2) --------------------------------------------------------------
 all_embeddings = []
 all_labels = []
+<<<<<<< HEAD
 all_paths = []
 all_inx = []
 all_names = []
@@ -112,3 +140,18 @@ df = df.sort_values(["label_idx", "image_path"]).reset_index(drop=True)
 
 df.to_csv("resnet18_embeddings.csv", index=False)
 print("✅ Saved", len(df), "rows to resnet18_embeddings.csv")
+=======
+
+model.eval()
+with torch.no_grad():
+    for images, labels in dataset_dl:
+        images = images.to(device)
+        feats = model(images)  # [B, 512]
+        all_embeddings.append(feats.cpu())
+        all_labels.append(labels.cpu())
+
+embeddings = torch.cat(all_embeddings)  # [N, 512]
+labels     = torch.cat(all_labels)      # [N]
+
+torch.save({'embeddings': embeddings, 'labels': labels}, 'resnet18_embeddings.pt')
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from .Contrastive_Learning.contrustive_learning_classes import ContrastiveModel,ContrastiveMLP
 import torch
 import torch.nn.functional as F
@@ -9,6 +10,11 @@ import sys
 import os
 from transformer_train_loop import train_loop
 from torch.utils.data import TensorDataset, DataLoader
+=======
+from Contrustive_Learning.contrustive_learning_classes import ContrastiveModel
+import torch
+import torch.nn.functional as F
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 
 def nt_xent_loss(z1, z2, temperature=0.5):
     z1 = F.normalize(z1, dim=1)
@@ -31,6 +37,7 @@ def nt_xent_loss(z1, z2, temperature=0.5):
     loss = F.cross_entropy(sim, labels)
     return loss
 
+<<<<<<< HEAD
 train_raw = pd.read_csv("train_set.csv")
 test_raw = pd.read_csv("test_set.csv")
 val_raw = pd.read_csv("val_set.csv")
@@ -45,6 +52,8 @@ train_dl = DataLoader(make_tensor_ds("train_set.csv", kp_mu, kp_std, cnn_mu, cnn
 val_dl   = DataLoader(make_tensor_ds("val_set.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
 test_dl  = DataLoader(make_tensor_ds("test_set.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
 
+=======
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 model = ContrastiveModel(resnet_dim=512, keypoint_dim=68, embed_dim=128).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
 
@@ -54,8 +63,13 @@ for epoch in range(num_epochs):
 
         # 1) get frozen‐backbone embeddings
         with torch.no_grad():
+<<<<<<< HEAD
             feats_img = ContrastiveMLP(images)    # [B, 512, 1, 1] → flatten → [B,512]
             feats_kp  = ContrastiveMLP(kp_xy)  # [B, keypoint_dim]
+=======
+            feats_img = resnet_backbone(images)    # [B, 512, 1, 1] → flatten → [B,512]
+            feats_kp  = yolo_keypoint_encoder(kp_xy)  # [B, keypoint_dim]
+>>>>>>> 40f56b4483f1167f0764f1873891fbd4c909a87d
 
         # 2) project into shared space
         z_img, z_kp = model(feats_img, feats_kp)
