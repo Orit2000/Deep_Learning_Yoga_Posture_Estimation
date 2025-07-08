@@ -41,10 +41,34 @@ def make_tensor_ds(csv_path, kp_mu, kp_std, cnn_mu, cnn_std):
     kp   = (kp  - kp_mu ) / kp_std
     cnn  = (cnn - cnn_mu) / cnn_std
     return TensorDataset(kp, cnn, y)
+def count_parameters(model, verbose=True):
+    """
+    Counts and optionally prints the number of parameters in the model.
+
+    Args:
+        model (torch.nn.Module): The model to analyze.
+        verbose (bool): If True, prints param count per submodule.
+
+    Returns:
+        num_total_params (int): Total number of parameters.
+        num_trainable_params (int): Number of trainable parameters (requires_grad=True).
+    """
+    num_total_params = sum(p.numel() for p in model.parameters())
+    num_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    if verbose:
+        print(f"Total parameters: {num_total_params:,}")
+        print(f"Trainable parameters: {num_trainable_params:,}")
+        print(f"Percentage trainable: {100 * num_trainable_params / num_total_params:.2f}%")
+        print("\nBreakdown by module:")
+        for name, param in model.named_parameters():
+            print(f"{name:30}: {param.numel():>10} | {'trainable' if param.requires_grad else 'frozen'}")
+
+    return num_total_params, num_trainable_params
 
 train_raw = pd.read_csv("train_set.csv")
-test_raw = pd.read_csv("test_set.csv")
-val_raw = pd.read_csv("val_set.csv")
+val_raw = pd.read_csv("test_set.csv")
+test_raw = pd.read_csv("val_set.csv")
 KP_COLS   = [c for c in train_raw.columns if c.startswith("kp_")]
 CNN_COLS  = [c for c in train_raw.columns if c.startswith("cnn_")]
 kp_mu  = torch.tensor(train_raw[KP_COLS ].mean().values, dtype=torch.float32)
@@ -56,15 +80,21 @@ train_dl = DataLoader(make_tensor_ds("train_set.csv", kp_mu, kp_std, cnn_mu, cnn
 val_dl   = DataLoader(make_tensor_ds("val_set.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
 test_dl  = DataLoader(make_tensor_ds("test_set.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
 
-model = TwoTokenTransformer(num_classes=47)
+model = TwoTokenTransformer(kp_dim=34,
+                 cnn_dim=512,
+                 d_model=256,
+                 nhead=8,
+                 depth=20,
+                 num_classes= 47)
+print(f"The model is defined!")
 model.to(device := ("cuda" if torch.cuda.is_available() else "cpu"))
 
-opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-4)
-sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode="max", patience=3)
+opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
+sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode="max", patience=5)
 loss_fn = torch.nn.CrossEntropyLoss()
-
-history, best_epoch = train_loop(model, train_dl, val_dl, opt, loss_fn, 500, 47,verbose=True)
-
+print(f"We are entering train loop...")
+history, best_epoch = train_loop(model, train_dl, val_dl, opt, loss_fn, 150, 47,verbose=True)
+print(count_parameters(model))
 # for epoch in range(25):
 #     model.train()
 #     for kp, cnn, y in train_dl:

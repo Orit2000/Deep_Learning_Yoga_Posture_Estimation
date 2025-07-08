@@ -5,12 +5,12 @@ class TwoTokenTransformer(nn.Module):
     def __init__(self,
                  kp_dim=34,
                  cnn_dim=512,
-                 d_model=128,
-                 nhead=4,
-                 depth=1,
+                 d_model=256,
+                 nhead=8,
+                 depth=6,
                  num_classes= 47 ):
         super().__init__()
-
+        print(f"The hyper params used: {kp_dim}, {cnn_dim}, {d_model}, {nhead}, {depth}")
         # project each modality into the common d_model space
         self.kp_proj  = nn.Linear(kp_dim,  d_model)
         self.cnn_proj = nn.Linear(cnn_dim, d_model)
@@ -22,7 +22,7 @@ class TwoTokenTransformer(nn.Module):
                             d_model=d_model,
                             nhead=nhead,
                             dim_feedforward=2*d_model,
-                            dropout=0.5,
+                            dropout=0.35,
                             batch_first=True)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=depth)
 
@@ -40,3 +40,5 @@ class TwoTokenTransformer(nn.Module):
         h = self.encoder(x)                         # transformer magic
         cls = h[:, 0]                               # take first token
         return self.head(cls)
+
+    
