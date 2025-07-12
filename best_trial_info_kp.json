@@ -1,0 +1,1 @@
+{"trial_number": 5, "value": 0.64453125, "params": {"hidden_dim": 256, "lr": 0.005970022688722302, "batch_size": 32, "optimizer": "Adam"}}

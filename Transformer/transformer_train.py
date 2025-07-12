@@ -58,7 +58,7 @@ test_dl   = DataLoader(make_tensor_ds("test_set.csv"),   batch_size=32)
 model = TwoTokenTransformer(num_classes=47)
 model.to(device := ("cuda" if torch.cuda.is_available() else "cpu"))
 
-opt = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-4)
+opt = torch.optim.AdamW(model.parameters(), lr=1.905037366532312e-05, weight_decay=9.41987576889463e-05)
 sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode="max", patience=3)
 loss_fn = torch.nn.CrossEntropyLoss()
 

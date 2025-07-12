@@ -10,42 +10,22 @@ from optuna.pruners import MedianPruner
 from optuna.exceptions import TrialPruned
 import json
 
-# ----------------------------------------------
-# Persistent HPO setup
-# ----------------------------------------------
-STUDY_NAME = "yoga_keypoints_hpo"
-STORAGE_PATH = "sqlite:///optuna_yoga_keypoints.db"
-
-study = optuna.create_study(
-    study_name=STUDY_NAME,
-    storage=STORAGE_PATH,
-    direction="maximize",
-    sampler=TPESampler(n_startup_trials=10),
-    pruner=MedianPruner(n_warmup_steps=5),
-    load_if_exists=True
-)
 
 # ----------------------------------------------
 # Load and prepare dataset
 # ----------------------------------------------
-df = pd.read_csv("yolo_keypoints_dataset.csv").dropna()
-# Use the numeric label directly
 
-# Only keep rows where e0–e33 are all numeric
-keypoint_columns = [f"e{i}" for i in range(34)]
+train_df = pd.read_csv("Pose_keypoints/Keypoints_Only_CSVs/train_keypoints_only.csv").dropna()
+val_df   = pd.read_csv("Pose_keypoints/Keypoints_Only_CSVs/val_keypoints_only.csv").dropna()
 
-# Try converting all keypoint columns to numeric, coerce errors to NaN
-df[keypoint_columns] = df[keypoint_columns].apply(pd.to_numeric, errors='coerce')
+# Extract keypoints and labels
+keypoint_columns = [f"kp_e{i}" for i in range(34)]
 
-# Drop any rows with NaN in the keypoint columns
-df = df.dropna(subset=keypoint_columns)
+X_train = train_df[keypoint_columns].values
+y_train = train_df["label_idx"].values
 
-X = df[keypoint_columns].values
-y = df["label_idx"].values
-num_classes = len(df["label_idx"].unique())
-input_length = X.shape[1]
-
-X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+X_val = val_df[keypoint_columns].values
+y_val = val_df["label_idx"].values
 
 X_train = torch.tensor(X_train, dtype=torch.float32)
 X_val   = torch.tensor(X_val,   dtype=torch.float32)
@@ -55,37 +35,41 @@ y_val   = torch.tensor(y_val,   dtype=torch.long)
 train_ds = TensorDataset(X_train, y_train)
 val_ds   = TensorDataset(X_val, y_val)
 
-train_loader = DataLoader(train_ds, batch_size=32, shuffle=True)
-val_loader   = DataLoader(val_ds,   batch_size=32)
+# train_loader = DataLoader(train_ds, batch_size=32, shuffle=True)
+# val_loader   = DataLoader(val_ds,   batch_size=32)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-num_classes = len(set(y))
-input_length = X.shape[1]
+num_classes = len(set(y_train) | set(y_val))  # union to be safe
+input_length = X_train.shape[1]
 best_trial_info = {"trial_number": None, "history": None, "best_epoch": None}
 
+best_val_acc_so_far = 0.0  # ⬅️ Track the best value globally
 # ----------------------------------------------
 # Define objective function for Optuna
 # ----------------------------------------------
 def objective(trial):
-    hidden_dim = trial.suggest_categorical("hidden_dim", [32, 64, 128, 256])  # To change the value-space to [64, 96, 128, 160, 192, 256] new study is required
-    num_layers = trial.suggest_categorical("num_layers", [2, 3]) # Let Optuna decide how many layers to take
-    lr         = trial.suggest_float("lr", 1e-5, 1e-2, log=True)
-    batch_size = trial.suggest_categorical("batch_size", [16, 32, 64, 128])
-    norm_type  = trial.suggest_categorical("norm_type", ["none", "batch", "layer"]) # Let Optuna decide which norm type to use
-    opt_name   = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD"]) # Let Optuna decide which optimizer type to use
-    dropout    = 0.271   # Instead of - trial.suggest_float("dropout", 0.1, 0.5) we fixed the value
-
+    #hidden_dim = trial.suggest_categorical("hidden_dim", [32, 64, 128, 256])  # To change the value-space to [64, 96, 128, 160, 192, 256] new study is required
+    #num_layers = trial.suggest_categorical("num_layers", [2, 3]) # Let Optuna decide how many layers to take
+    #lr         = trial.suggest_float("lr", 1e-4, 1e-2, log=True)
+    #batch_size = trial.suggest_categorical("batch_size", [16, 32, 64, 128])
+    #norm_type  = trial.suggest_categorical("norm_type", ["none", "batch", "layer"]) # Let Optuna decide which norm type to use
+    #opt_name   = trial.suggest_categorical("optimizer", ["Adam", "RMSprop"]) # Let Optuna decide which optimizer type to use
+    #dropout    = trial.suggest_float("dropout", 0.1, 0.5)  # Instead of - trial.suggest_float("dropout", 0.1, 0.5) we fixed the value
+    hidden_dim = trial.suggest_categorical("hidden_dim", [64, 128, 256])  # avoid low values like 32 initially
+    lr         = trial.suggest_float("lr", 1e-4, 1e-2, log=True)
+    batch_size = trial.suggest_categorical("batch_size", [32, 64])
+    opt_name   = trial.suggest_categorical("optimizer", ["Adam"])
     # hidden_dim = 256
-    # num_layers = 2
+    num_layers = 2
     # lr         = 0.00197
     # batch_size = 32
-    # norm_type  = "layer"
+    norm_type  = "none"
     # opt_name   = "Adam"
-    # dropout    = 0.271  
+    dropout    = 0.3
     
     # Dataloaders with new batch size
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    val_loader   = DataLoader(val_ds,   batch_size=batch_size)
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=0)
+    val_loader   = DataLoader(val_ds,   batch_size=batch_size, pin_memory=True, num_workers=0)
 
     def make_norm(dim):
         if norm_type == "batch":
@@ -141,39 +125,97 @@ def objective(trial):
         testloader=val_loader,
         optimizer=optimizer,
         loss_fn=loss_fn,
-        epochs=60,  # tuning epochs
+        epochs=10,  # tuning epochs
         num_classes=num_classes,
         verbose=False,
         trial=trial,
-        patience =5
+        patience =3,
+        save_history=False  # ⬅️ prevent saving non-best trial history
     )
+
+    current_val_acc = history["test_accuracy"][best_epoch]
+
     print(f"Train Loss: {history['train_loss'][best_epoch]:.4f}, "
       f"Val Loss: {history['test_loss'][best_epoch]:.4f}, "
       f"Train Acc: {history['train_accuracy'][best_epoch]:.4f}, "
       f"Val Acc: {history['test_accuracy'][best_epoch]:.4f}")
     
-    if trial.number == study.best_trial.number:
-        best_trial_info["trial_number"] = trial.number
-        best_trial_info["history"] = history
-        best_trial_info["best_epoch"] = best_epoch
+     # ⬇️ Save only if current trial is better than previous best
+    global best_val_acc_so_far
+    if current_val_acc > best_val_acc_so_far:
+        best_val_acc_so_far = current_val_acc
 
-    return history["test_accuracy"][best_epoch]  # maximize this
+        # Save best weights
+        torch.save(model.state_dict(), "best_model_weights_kp.pth")
+
+        # Save training history for best trial
+        pd.DataFrame(history).to_csv("training_history_kp.csv", index=False)
+        with open("training_history_kp.json", "w") as fp:
+            json.dump(history, fp)
+
+        # Save best trial info
+        with open("best_trial_info_kp.json", "w") as f:
+            json.dump({
+                "trial_number": trial.number,
+                "value": current_val_acc,
+                "params": trial.params
+            }, f)
+
+        print(f"💾 New best model saved at trial {trial.number} with val acc {current_val_acc:.4f}")
+
+    return current_val_acc
+
 # ----------------------------------------------
 # Run Optuna HPO
 # ----------------------------------------------
-study.optimize(objective, n_trials=30)
+#study.optimize(objective, n_trials=25)
 
 # ----------------------------------------------
 # Output best trial and export to CSV
 # ----------------------------------------------
-print("✅ Best trial:")
-print(f"  Value (Best Accuracy): {study.best_trial.value:.4f}")
-print(f"  Params: {study.best_trial.params}")
+# best_trial = study.best_trial
+# print("✅ Best trial:")
+# print(f"  Value (Best Accuracy): {best_trial.value:.4f}")
+# print(f"  Params: {best_trial.params}")
 
-# Export all trials to CSV
-df_trials = study.trials_dataframe()
-df_trials.to_csv("optuna_yoga_keypoints.csv", index=False)
-print("📄 Trials saved to 'optuna_yoga_keypoints.csv'")
+# # Save best trial summary
+# # with open("best_trial_info_kp.json", "w") as f:
+# #     json.dump({
+# #         "trial_number": best_trial.number,
+# #         "value": best_trial.value,
+# #         "params": best_trial.params
+# #     }, f)
 
-with open("best_trial_history.json", "w") as f:
-    json.dump(best_trial_info, f)
+# # Export all trials to CSV
+# df_trials = study.trials_dataframe()
+# df_trials.to_csv("optuna_yoga_keypoints1.csv", index=False)
+# print("📄 Trials saved to 'optuna_yoga_keypoints1.csv'")
+
+if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()  # Optional on Windows, but good practice
+    
+    STUDY_NAME = "yoga_keypoints_hpo"
+    STORAGE_PATH = "sqlite:///optuna_yoga_keypoints.db"
+
+    study = optuna.create_study(
+    study_name=STUDY_NAME,
+    storage=STORAGE_PATH,
+    direction="maximize",
+    sampler=TPESampler(n_startup_trials=5),
+    pruner=MedianPruner(n_warmup_steps=3),
+    load_if_exists=True
+    )
+
+    # Run Optuna HPO
+    study.optimize(objective, n_trials=10)
+
+    # Output best trial and export to CSV
+    best_trial = study.best_trial
+    print("✅ Best trial:")
+    print(f"  Value (Best Accuracy): {best_trial.value:.4f}")
+    print(f"  Params: {best_trial.params}")
+
+    df_trials = study.trials_dataframe()
+    df_trials.to_csv("optuna_yoga_keypoints.csv", index=False)
+    print("📄 Trials saved to 'optuna_yoga_keypoints.csv'")

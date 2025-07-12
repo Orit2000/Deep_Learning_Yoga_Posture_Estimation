@@ -8,7 +8,7 @@ from transformer_train_loop import train_loop
 
 # ----------------------- CONFIG ------------------------
 BATCH_SIZE = 16
-d_model = 512
+d_model = 512.0
 nhead = 2
 depth = 4
 lr = 1.9e-5

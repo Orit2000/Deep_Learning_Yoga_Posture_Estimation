@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report, confusion_matrix
 import seaborn as sns
-
+from torch.utils.data import Dataset
 import torch
 from torch import nn
 from torchsummary import summary
@@ -167,7 +167,7 @@ def train_loop(model,
         if improved:
             best_acc   = va
             best_epoch = epoch
-            torch.save(model.state_dict(), "best.pth")
+            torch.save(model.state_dict(), "best_weights_trans.pth")
 
         if verbose:
             print(f"Epoch {epoch:02d}"
@@ -177,6 +177,23 @@ def train_loop(model,
 
     print(f"Best val acc = {best_acc:.3f} at epoch {best_epoch}")
     return history, best_epoch
+
+
+
+class TransformerDataset(Dataset):
+    def __init__(self, csv_path):
+        df = pd.read_csv(csv_path)
+        self.X = df.iloc[:, 0:586].values.astype('float32')  # 34 keypoints + 552 CNN features
+        self.y = df["label_idx"].values.astype('int64')
+
+    def __len__(self):
+        return len(self.y)
+
+    def __getitem__(self, idx):
+        return {
+            "x": torch.tensor(self.X[idx]),
+            "y": torch.tensor(self.y[idx])
+        }
 # def train_loop(model, trainloader, testloader, optimizer, loss_fn, epochs, num_classes,verbose=True,):
 #     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #     accuracy_score = Accuracy(task="multiclass", num_classes=num_classes).to(device)
