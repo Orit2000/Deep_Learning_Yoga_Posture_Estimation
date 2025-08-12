@@ -5,13 +5,13 @@ import torch.nn.functional as F
 class MultiTokenTransformer(nn.Module):
     def __init__(self,
                  kp_dim=34,
-                 cnn_dim=128,
+                 cnn_dim=512,
                  num_classes=47,
-                 d_model=512,
-                 nhead=4,
+                 d_model=256,
+                 nhead=1,
                  n_layers=1,
                  dim_ff=2*256,          # slimmer MLP
-                 dropout=0.5):
+                 dropout=0.35):
         super().__init__()
 
         # --- token splits --------------------------------------------------

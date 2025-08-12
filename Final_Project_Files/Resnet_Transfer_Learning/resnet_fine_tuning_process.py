@@ -89,7 +89,7 @@ loss_fn = nn.CrossEntropyLoss()
 
 # -------- Phase A: Fine-tune head only --------
 for p in model.parameters():
-    p.requires_grad_(False)
+    p.requires_grad_(True)
 for p in model.fc.parameters():
     p.requires_grad_(True)
 
