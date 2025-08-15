@@ -2,12 +2,14 @@ import torch, torch.nn.functional as F
 from torch.utils.data import DataLoader
 from TwoTokenTransformer import TwoTokenTransformer
 import pandas as pd
+from MultiTokenTransformer import MultiTokenTransformer
 import sys
 import os
 from transformer_train_loop import train_loop, test_step
 from torch.utils.data import TensorDataset, DataLoader
 from torchmetrics import Accuracy, F1Score, ConfusionMatrix
-
+from sklearn.utils.class_weight import compute_class_weight
+import numpy as np
 
 def make_tensor_ds(csv_path, kp_mu, kp_std, cnn_mu, cnn_std):
     df   = pd.read_csv(csv_path)
@@ -45,9 +47,9 @@ def count_parameters(model, verbose=True):
 
     return num_total_params, num_trainable_params
 
-train_raw = pd.read_csv("train_set_updated.csv")
-test_raw= pd.read_csv("val_set_updated.csv")
-val_raw = pd.read_csv("test_set_updated.csv")
+train_raw = pd.read_csv("train_set_half_fine_tune_kp_conf.csv")
+test_raw= pd.read_csv("val_set_half_fine_tune_kp_conf.csv")
+val_raw = pd.read_csv("test_set_half_fine_tune_kp_conf.csv")
 KP_COLS   = [c for c in train_raw.columns if c.startswith("kp_")]
 CNN_COLS  = [c for c in train_raw.columns if c.startswith("cnn_")]
 kp_mu  = torch.tensor(train_raw[KP_COLS ].mean().values, dtype=torch.float32)
@@ -56,14 +58,15 @@ cnn_mu = torch.tensor(train_raw[CNN_COLS].mean().values, dtype=torch.float32)
 cnn_std= torch.tensor(train_raw[CNN_COLS].std ().values + 1e-8, dtype=torch.float32)
 
 #train_dl = DataLoader(make_tensor_ds("train_set_updated.csv", kp_mu, kp_std, cnn_mu, cnn_std), batch_size=64, shuffle=True)
-test_dl   = DataLoader(make_tensor_ds("val_set_updated.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
+test_dl   = DataLoader(make_tensor_ds("val_set_half_fine_tune_kp_conf.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
 #val_dl  = DataLoader(make_tensor_ds("test_set_updated.csv", kp_mu, kp_std, cnn_mu, cnn_std),   batch_size=64)
 
-model = TwoTokenTransformer(kp_dim=34,
+model = MultiTokenTransformer(kp_dim=51,
                  cnn_dim=512,
-                 d_model=256,
-                 nhead=1,
-                 depth=1,
+                 d_model=128,
+                 nhead=4,
+                 n_layers=2,
+                 dim_ff=2*128,
                  num_classes= 47)
 model.load_state_dict(torch.load("best.pth"))
 
@@ -71,9 +74,16 @@ model.eval()
 print(f"The model is defined!")
 model.to(device := ("cuda" if torch.cuda.is_available() else "cpu"))
 
-opt = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
-sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode="max", patience=5)
-loss_fn = torch.nn.CrossEntropyLoss()
+classes = np.arange(47)
+class_weights_np = compute_class_weight(
+    class_weight="balanced",
+    classes=classes,
+    y=train_raw["label_idx"].values
+)
+class_weights = torch.tensor(class_weights_np, dtype=torch.float32).to(device)
+
+
+loss_fn = torch.nn.CrossEntropyLoss(weight=class_weights)
 accuracy_score = Accuracy(task="multiclass", num_classes=47).to(device)
 f1_score       = F1Score (task="multiclass", num_classes=47).to(device)
     

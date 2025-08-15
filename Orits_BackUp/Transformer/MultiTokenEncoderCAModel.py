@@ -5,11 +5,11 @@ import numpy as np  # only if you process joint indices for kp_mask
 from CrossAttnBlock import CrossAttnBlock
 
 class MultiTokenEncoderCAModel(nn.Module):
-    def __init__(self, kp_dim=34, cnn_dim=512, num_classes=47,
+    def __init__(self, kp_dim=51, cnn_dim=512, num_classes=47,
                  d_model=256, nhead=4, n_layers=1, dim_ff=512, dropout=0.25):
         super().__init__()
-        self.kp_splits   = (10, 8, 8, 8)  # sum to 34
-        self.cnn_splits  = (64,)*8     # one CNN token
+        self.kp_splits   = (3,)*17  # sum to 34
+        self.cnn_splits  = (512,)     # one CNN token
         self.n_tokens    = 1 + len(self.kp_splits) + len(self.cnn_splits)  # +1 for CLS
 
         # projections

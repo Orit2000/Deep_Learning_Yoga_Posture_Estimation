@@ -23,6 +23,6 @@ def replace_cnn_embeddings(set_csv_path, new_emb_csv_path, out_path):
     print(f"Saved: {out_path}")
 
 # Example usage:
-replace_cnn_embeddings("train_set.csv", "resnet18_train_embeddings.csv", "train_set_updated.csv")
-replace_cnn_embeddings("val_set.csv",   "resnet18_val_embeddings.csv",   "val_set_updated.csv")
-replace_cnn_embeddings("test_set.csv",  "resnet18_test_embeddings.csv",  "test_set_updated.csv")
+replace_cnn_embeddings("train_set_updated_kp_conf.csv", "resnet18_train_embeddings_half_fine_tune.csv", "train_set_half_fine_tune_kp_conf.csv")
+replace_cnn_embeddings("val_set_updated_kp_conf.csv",   "resnet18_val_embeddings_half_fine_tune.csv",   "val_set_half_fine_tune_kp_conf.csv")
+replace_cnn_embeddings("test_set_updated_kp_conf.csv",  "resnet18_test_embeddings_half_fine_tune.csv",  "test_set_half_fine_tune_kp_conf.csv")

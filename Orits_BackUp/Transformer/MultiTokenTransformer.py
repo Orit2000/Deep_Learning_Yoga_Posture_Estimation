@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class MultiTokenTransformer(nn.Module):
     def __init__(self,
-                 kp_dim=34,
+                 kp_dim=51,
                  cnn_dim=512,
                  num_classes=47,
                  d_model=256,
@@ -15,7 +15,7 @@ class MultiTokenTransformer(nn.Module):
         super().__init__()
 
         # --- token splits --------------------------------------------------
-        self.kp_splits   = (10, 8, 8, 8)  #(9, 9, 8, 8)                 # 4 tokens
+        self.kp_splits   = (3,)*17  #(9, 9, 8, 8)                 # 4 tokens
         self.cnn_splits  = (512,)#(64,)*8                      # 8 tokens
         self.n_tokens    = 1 + len(self.kp_splits) + len(self.cnn_splits)
 
@@ -26,6 +26,11 @@ class MultiTokenTransformer(nn.Module):
             [nn.Linear(d, d_model) for d in self.cnn_splits])
 
         self.cls = nn.Parameter(torch.randn(1, 1, d_model))
+
+        # NEW: Positional Embeddings
+        self.positional_encoding = nn.Parameter(torch.randn(1, self.n_tokens, d_model))
+        # Alternatively, for more common learned positional embeddings:
+        # self.positional_encoding = nn.Embedding(self.n_tokens, d_model)
 
         encoder_layer = nn.TransformerEncoderLayer(
             d_model      = d_model,
@@ -63,6 +68,12 @@ class MultiTokenTransformer(nn.Module):
         cls_tok = self.cls.expand(B, -1, -1)
         x = torch.cat([cls_tok, *kp_tokens, *cnn_tokens], dim=1)  # (B, 13, d_model)
 
+        # NEW: Add positional encoding
+        # If using nn.Embedding:
+        # positions = torch.arange(self.n_tokens, device=x.device).unsqueeze(0).expand(B, -1)
+        # x = x + self.positional_encoding(positions)
+        # If using nn.Parameter:
+        x = x + self.positional_encoding.expand(B, -1, -1)
         # ----- token dropout (optional) ------------------------------------
         if self.training:
             mask = torch.rand_like(x[:,:,0]) < 0.1      # 10 % tokens

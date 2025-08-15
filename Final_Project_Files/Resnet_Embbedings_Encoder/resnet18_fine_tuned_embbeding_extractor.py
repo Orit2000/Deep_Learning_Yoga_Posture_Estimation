@@ -75,9 +75,9 @@ def extract_embeddings(model, csv_path, output_file):
 # Main
 # ----------------------------
 if __name__ == "__main__":
-    model_path = "best_fine_tune_resnet18.pth"  # path to your saved model
+    model_path = "best_half_fine_tune.pth"  # path to your saved model
     extractor = ResNet18FeatureExtractor(model_path)
 
-    extract_embeddings(extractor, "train_set.csv", "resnet18_train_embeddings.csv")
-    extract_embeddings(extractor, "val_set.csv", "resnet18_val_embeddings.csv")
-    extract_embeddings(extractor, "test_set.csv", "resnet18_test_embeddings.csv")
+    extract_embeddings(extractor, "train_set.csv", "resnet18_train_embeddings_half_fine_tune.csv")
+    extract_embeddings(extractor, "val_set.csv", "resnet18_val_embeddings_half_fine_tune.csv")
+    extract_embeddings(extractor, "test_set.csv", "resnet18_test_embeddings_half_fine_tune.csv")

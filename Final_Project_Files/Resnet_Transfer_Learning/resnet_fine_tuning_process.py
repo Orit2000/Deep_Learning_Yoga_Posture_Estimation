@@ -9,7 +9,8 @@ This script implements transfer learning with fine-tuning applied only to the fi
 Main output:
 - Trained model weights saved to `resnet18_yoga.pt`
 """
-
+from sklearn.utils.class_weight import compute_class_weight
+import numpy as np
 from torchvision import transforms, models
 from torch.utils.data import DataLoader, Dataset
 import torch
@@ -85,14 +86,40 @@ in_feat = model.fc.in_features
 model.fc = nn.Linear(in_feat, num_classes)
 model.to(device)
 
-loss_fn = nn.CrossEntropyLoss()
+# --------------------------
+# Class weights (train only)
+# --------------------------
+classes = np.arange(num_classes)
+class_weights_np = compute_class_weight(
+    class_weight="balanced",
+    classes=classes,
+    y=train_ds.df["label_idx"].values
+)
+class_weights = torch.tensor(class_weights_np, dtype=torch.float32).to(device)
+loss_fn = nn.CrossEntropyLoss(weight=class_weights)
 
-# -------- Phase A: Fine-tune head only --------
+# # -------- Phase A: Fine-tune head only --------
+# for p in model.parameters():
+#     p.requires_grad_(True)
+# for p in model.fc.parameters():
+#     p.requires_grad_(True)
+# 2) Freeze everything
 for p in model.parameters():
-    p.requires_grad_(True)
-for p in model.fc.parameters():
-    p.requires_grad_(True)
+    p.requires_grad = False
 
+# 3) Unfreeze ONLY the last layer (fc)
+for p in model.fc.parameters():
+    p.requires_grad = True
+# for name, p in model.named_parameters():
+#     if  name.startswith("fc"):
+#         p.requires_grad = True
+# for p in model.layer4.parameters():
+#     p.requires_grad_(True)
+    
+# opt = torch.optim.Adam([
+#     {"params": model.layer4.parameters(), "lr": 5e-4},
+#     {"params": model.fc.parameters(), "lr": 5e-4}
+# ])
 opt = torch.optim.Adam(model.parameters(), lr=5e-4)
 #opt = torch.optim.SGD(model.fc.parameters(), lr=1e-2)
 
@@ -116,7 +143,7 @@ test_results =  pd.DataFrame([{
     "Test AP": test_ap_array.tolist()
 }])
 
-test_results.to_csv("test_results.csv", index=False)
+test_results.to_csv("test_results_half_fine_tune.csv", index=False)
 # -------- Phase B: Optional deeper fine-tuning --------
 # Uncomment below for fine-tuning last conv block
 # for p in model.layer4.parameters():
@@ -132,13 +159,13 @@ test_results.to_csv("test_results.csv", index=False)
 # )
 
 # -------------------------- Save model --------------------------
-torch.save(model.state_dict(), "resnet18_yoga_.pt")
-print("Model saved to resnet18_yoga.pt")
+torch.save(model.state_dict(), "resnet18_yoga_half_fine_tune.pt")
+print("Model saved to resnet18_yoga_half_fine_tune.pt")
 
 # Save history
 history_df = pd.DataFrame(history)
-history_df.to_csv("resnet_training_history_.csv", index=False)
-print("Training history saved to training_history.csv")
+history_df.to_csv("resnet_training_history_half_fine_tune.csv", index=False)
+print("Training history saved to training_history_half_fine_tune.csv")
 num_tune_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 num_total_params = sum(p.numel() for p in model.parameters())
 
